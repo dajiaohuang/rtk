@@ -1495,6 +1495,12 @@ fn pipeline_command_is_safe(rtk_cmd: &str, cmd: &str) -> bool {
     if rtk_cmd == "rtk ls" {
         return ls_has_long_format(cmd);
     }
+    if rtk_cmd == "rtk find" {
+        // `rtk find` may cap, reorder, filter, or strip `./` from entries;
+        // keep producer pipelines on the native listing so consumers receive
+        // the exact names and ordering emitted by find.
+        return false;
+    }
 
     true
 }
@@ -2521,6 +2527,15 @@ mod tests {
         assert_eq!(
             rewrite_command_no_prefixes("ls -la src | head -1", &[]),
             Some("rtk ls -la src | head -1".into())
+        );
+
+        assert!(!pipeline_command_is_safe(
+            "rtk find",
+            "find . -name '*.txt'"
+        ));
+        assert_eq!(
+            rewrite_command_no_prefixes("find . -name '*.txt' | head -2", &[]),
+            None
         );
     }
 
